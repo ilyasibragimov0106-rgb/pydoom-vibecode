@@ -30,8 +30,10 @@ PLAYER_RADIUS = 0.28
 PLAYER_MAX_HEALTH = 100
 START_BULLETS = 60
 START_SHELLS = 8
+START_CELLS = 40
 MAX_BULLETS = 250
 MAX_SHELLS = 50
+MAX_CELLS = 300
 PICKUP_RANGE = 0.62
 
 # -------------------------------------------------------------- weapons -----
@@ -46,7 +48,28 @@ SHOTGUN_COOLDOWN = 0.95
 SHOTGUN_SPREAD = 0.085
 SHOTGUN_ANIM = 0.42
 
+CHAINSAW_DMG = 13            # per damage tick while the motor runs
+CHAINSAW_TICK = 0.12
+CHAINSAW_RANGE = 1.4
+
+PLASMA_DMG = 15
+PLASMA_COOLDOWN = 0.11
+PLASMA_SPREAD = 0.022
+PLASMA_SPEED = 9.5
+PLASMA_ANIM = 0.12
+
 WAKE_NOISE_RADIUS = 9.0            # gunfire wakes npcs within this radius
+
+# ----------------------------------------------------- cyberdemon boss ------
+BOSS_EVERY = 5                     # a cyberdemon guards every Nth level
+CYBER_HEALTH = 850
+CYBER_SPEED = 1.85
+CYBER_MELEE_DMG = 25
+CYBER_MELEE_RANGE = 1.9
+CYBER_ROCKET_DMG = 26
+CYBER_ROCKET_SPEED = 5.5
+CYBER_ATTACK_RANGE = 13.0
+CYBER_CD = (1.4, 2.3)
 
 # ----------------------------------------------------------------- npc ------
 NPC_RADIUS = 0.30
@@ -74,5 +97,6 @@ SOLDIER_CD = (0.8, 1.8)
 MEDKIT_HEALTH = 25
 BULLETS_PICKUP = 20
 SHELLS_PICKUP = 6
+CELLS_PICKUP = 25
 
 EXIT_TRIGGER_DIST = 1.45

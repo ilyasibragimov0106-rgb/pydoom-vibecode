@@ -137,7 +137,7 @@ class ObjectRenderer:
         cs = 7
         surf = pygame.Surface((m.w * cs, m.h * cs), pygame.SRCALPHA)
         colors = {1: (150, 70, 60), 2: (120, 130, 150),
-                  3: (130, 130, 120), 4: (70, 160, 90)}
+                  3: (130, 130, 120), 4: (70, 160, 90), 5: (150, 45, 40)}
         for y in range(m.h):
             for x in range(m.w):
                 v = m.grid[y][x]
@@ -157,11 +157,13 @@ class ObjectRenderer:
                                    (int(it.x * cs), int(it.y * cs)), 2)
         for n in g.npcs:
             if n.alive:
-                pygame.draw.circle(surf, (255, 60, 40),
-                                   (int(n.x * cs), int(n.y * cs)), 2)
+                is_boss = getattr(n, 'is_boss', False)
+                pygame.draw.circle(surf, (170, 80, 255) if is_boss else (255, 60, 40),
+                                   (int(n.x * cs), int(n.y * cs)),
+                                   3 if is_boss else 2)
         for ex in g.map.exit_cells:
-            pygame.draw.circle(surf, (60, 255, 90),
-                               (int(ex[0] * cs), int(ex[1] * cs)), 3)
+            col = (60, 255, 90) if not g.map.exit_locked else (220, 60, 40)
+            pygame.draw.circle(surf, col, (int(ex[0] * cs), int(ex[1] * cs)), 3)
         p = g.player
         a = p.angle
         px, py = p.x * cs, p.y * cs

@@ -14,7 +14,11 @@ from settings import (NPC_RADIUS, NPC_SEPARATION, SIGHT_RANGE,
                       IMP_CD,
                       SOLDIER_HEALTH, SOLDIER_SPEED, SOLDIER_DMG,
                       SOLDIER_ACCURACY, SOLDIER_HOLD_DIST,
-                      SOLDIER_ATTACK_RANGE, SOLDIER_CD)
+                      SOLDIER_ATTACK_RANGE, SOLDIER_CD,
+                      CYBER_HEALTH, CYBER_SPEED, CYBER_MELEE_DMG,
+                      CYBER_MELEE_RANGE, CYBER_ROCKET_DMG, CYBER_ROCKET_SPEED,
+                      CYBER_ATTACK_RANGE, CYBER_CD,
+                      PLASMA_DMG, PLASMA_SPEED)
 from sprite_object import SpriteObject
 from textures import SPRITES
 
@@ -36,8 +40,8 @@ class NPC(SpriteObject):
     death_sound = ''
     death_frame_t = 0.16
 
-    def __init__(self, game, x, y):
-        super().__init__(game, x, y, scale=0.92, z=0.0)
+    def __init__(self, game, x, y, scale=0.92):
+        super().__init__(game, x, y, scale=scale, z=0.0)
         self.health = 100
         self.speed = 1.5
         self.state = 'idle'
@@ -52,6 +56,8 @@ class NPC(SpriteObject):
         self.attack_range = 9.0
         self.last_known = (x, y)
         self.radius = NPC_RADIUS
+        self.hit_w = 0.34              # half-width for hitscan angular tests
+        self.max_health = self.health
 
     @property
     def alive(self):
@@ -85,7 +91,7 @@ class NPC(SpriteObject):
             self.state = 'die'
             self.anim_t = 0.0
             self.game.sound_mgr.play(self.death_sound, 0.9)
-            self.game.on_npc_killed()
+            self.game.on_npc_killed(self)
         else:
             self.pain_t = 0.3
             self.game.sound_mgr.play(self.pain_sound, 0.8)
@@ -227,6 +233,7 @@ class Imp(NPC):
         super().__init__(game, x, y)
         sp_mul, hp_mul = _difficulty(game)
         self.health = int(IMP_HEALTH * hp_mul)
+        self.max_health = self.health
         self.speed = IMP_SPEED * sp_mul
         self.attack_range = IMP_ATTACK_RANGE
         self.cd_range = IMP_CD
@@ -260,6 +267,7 @@ class Soldier(NPC):
         super().__init__(game, x, y)
         sp_mul, hp_mul = _difficulty(game)
         self.health = int(SOLDIER_HEALTH * hp_mul)
+        self.max_health = self.health
         self.speed = SOLDIER_SPEED * sp_mul
         self.attack_range = SOLDIER_ATTACK_RANGE
         self.cd_range = SOLDIER_CD
@@ -278,21 +286,34 @@ class Soldier(NPC):
             self.game.player.damage(int(SOLDIER_DMG * random.uniform(0.7, 1.3)))
 
 
-class Fireball(SpriteObject):
-    def __init__(self, game, x, y, ang):
-        super().__init__(game, x, y, scale=0.3, z=0.45, emissive=True)
-        self.vx = math.cos(ang) * IMP_FIREBALL_SPEED
-        self.vy = math.sin(ang) * IMP_FIREBALL_SPEED
+class Projectile(SpriteObject):
+    """Flying plasma/fireball/rocket.  from_player=True damages npcs,
+    otherwise it damages the player."""
+
+    def __init__(self, game, x, y, ang, speed, dmg, scale=0.3, z=0.45,
+                 frames_key='fireball', sound_hit='explosion', hit_vol=0.8,
+                 explosion_scale=0.5, explosion_frames='explosion',
+                 from_player=False):
+        super().__init__(game, x, y, scale=scale, z=z, emissive=True)
+        self.vx = math.cos(ang) * speed
+        self.vy = math.sin(ang) * speed
+        self.dmg = dmg
+        self.frames_key = frames_key
+        self.sound_hit = sound_hit
+        self.hit_vol = hit_vol
+        self.explosion_scale = explosion_scale
+        self.explosion_frames = explosion_frames
+        self.from_player = from_player
         self.anim_t = 0.0
         self.life = 0.0
 
     def current_frame(self):
-        return SPRITES['fireball'][int(self.anim_t * 10) % 2]
+        return SPRITES[self.frames_key][int(self.anim_t * 10) % 2]
 
     def update(self, dt):
         self.anim_t += dt
         self.life += dt
-        if self.life > 5.0:
+        if self.life > 6.0:
             self.dead = True
             return
         nx = self.x + self.vx * dt
@@ -301,26 +322,124 @@ class Fireball(SpriteObject):
             self.explode()
             return
         self.x, self.y = nx, ny
-        p = self.game.player
-        if p.alive and math.hypot(p.x - self.x, p.y - self.y) < 0.5:
-            p.damage(int(IMP_FIREBALL_DMG * random.uniform(0.8, 1.2)))
-            self.explode()
+        if self.from_player:
+            for npc in self.game.npcs:
+                if npc.alive and math.hypot(npc.x - self.x, npc.y - self.y) < 0.5:
+                    npc.take_damage(int(self.dmg * random.uniform(0.85, 1.15)),
+                                    (self.x, self.y))
+                    self.explode()
+                    return
+        else:
+            p = self.game.player
+            if p.alive and math.hypot(p.x - self.x, p.y - self.y) < 0.5:
+                p.damage(int(self.dmg * random.uniform(0.8, 1.2)))
+                self.explode()
 
     def explode(self):
         self.dead = True
-        self.game.effects.append(Explosion(self.game, self.x, self.y))
-        self.game.sound_mgr.play('explosion', 0.8)
+        self.game.effects.append(Explosion(self.game, self.x, self.y,
+                                           scale=self.explosion_scale,
+                                           frames_key=self.explosion_frames))
+        self.game.sound_mgr.play(self.sound_hit, self.hit_vol)
+
+
+class Fireball(Projectile):
+    def __init__(self, game, x, y, ang):
+        super().__init__(game, x, y, ang, speed=IMP_FIREBALL_SPEED,
+                         dmg=IMP_FIREBALL_DMG, scale=0.3, z=0.45,
+                         frames_key='fireball', sound_hit='explosion')
+
+
+class PlasmaBolt(Projectile):
+    def __init__(self, game, x, y, ang):
+        super().__init__(game, x, y, ang, speed=PLASMA_SPEED, dmg=PLASMA_DMG,
+                         scale=0.22, z=0.45, frames_key='plasma',
+                         sound_hit='plasma_hit', hit_vol=0.6,
+                         explosion_scale=0.4,
+                         explosion_frames='plasma_explosion',
+                         from_player=True)
+
+
+class Rocket(Projectile):
+    def __init__(self, game, x, y, ang):
+        super().__init__(game, x, y, ang, speed=CYBER_ROCKET_SPEED,
+                         dmg=CYBER_ROCKET_DMG, scale=0.4, z=0.42,
+                         frames_key='rocket', sound_hit='explosion',
+                         hit_vol=1.0, explosion_scale=0.8)
 
 
 class Explosion(SpriteObject):
-    def __init__(self, game, x, y):
-        super().__init__(game, x, y, scale=0.5, z=0.42, emissive=True)
+    def __init__(self, game, x, y, scale=0.5, frames_key='explosion'):
+        super().__init__(game, x, y, scale=scale, z=0.42, emissive=True)
+        self.frames_key = frames_key
         self.life = 0.0
 
     def current_frame(self):
-        return SPRITES['explosion'][min(int(self.life / 0.1), 2)]
+        frames = SPRITES[self.frames_key]
+        return frames[min(int(self.life / 0.1), len(frames) - 1)]
 
     def update(self, dt):
         self.life += dt
         if self.life > 0.3:
             self.dead = True
+
+
+class Cyberdemon(NPC):
+    """Boss every BOSS_EVERY levels: huge, never flinches, fires rockets.
+    The exit switch stays sealed until it drops dead."""
+
+    walk_key = 'cyber_walk'
+    attack_key = 'cyber_attack'
+    pain_key = 'cyber_pain'
+    die_key = 'cyber_die'
+    sight_sound = 'cyber_sight'
+    pain_sound = 'cyber_pain'
+    death_sound = 'cyber_die'
+    is_boss = True
+
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y, scale=1.22)
+        sp_mul, hp_mul = _difficulty(game)
+        self.health = int(CYBER_HEALTH * hp_mul)
+        self.max_health = self.health
+        self.speed = CYBER_SPEED * sp_mul
+        self.attack_range = CYBER_ATTACK_RANGE
+        self.cd_range = CYBER_CD
+        self.attack_time = 0.55
+        self.attack_hit_t = 0.28
+        self.radius = 0.4
+        self.hit_w = 0.55
+
+    def take_damage(self, dmg, from_pos):
+        if not self.alive:
+            return
+        self.health -= dmg
+        self.last_known = from_pos
+        if self.health <= 0:
+            self.health = 0
+            self.state = 'die'
+            self.anim_t = 0.0
+            self.game.sound_mgr.play(self.death_sound, 1.0)
+            self.game.on_npc_killed(self)
+        else:
+            # never flinches - only an occasional growl
+            if random.random() < 0.1:
+                self.game.sound_mgr.play(self.pain_sound, 0.7)
+            if self.state == 'idle':
+                self.wake()
+
+    def _hold_position(self, dist, see):
+        return see and dist < 2.4
+
+    def do_attack(self, dist, see):
+        p = self.game.player
+        if dist <= CYBER_MELEE_RANGE + 0.2:
+            self.game.sound_mgr.play('scratch', 1.0)
+            if see and dist < CYBER_MELEE_RANGE + 0.6:
+                p.damage(int(CYBER_MELEE_DMG * random.uniform(0.8, 1.2)))
+        else:
+            self.game.sound_mgr.play('rocket', 0.9)
+            ang = math.atan2(p.y - self.y, p.x - self.x)
+            fx = self.x + math.cos(ang) * 0.7
+            fy = self.y + math.sin(ang) * 0.7
+            self.game.projectiles.append(Rocket(self.game, fx, fy, ang))

@@ -19,7 +19,7 @@ from object_renderer import ObjectRenderer
 from hud import Hud
 from sound import SoundManager
 from sprite_object import Pickup, Torch
-from npc import Imp, Soldier
+from npc import Imp, Soldier, Cyberdemon, Explosion
 from weapon import WeaponManager
 
 FIRE_W, FIRE_H = 320, 90
@@ -116,8 +116,18 @@ class Game:
             self.map = GameMap(generate_level(self.level, seed=self.level_seed))
         sx, sy, sa = self.map.player_start
         self.player = Player(self, sx, sy, sa)
-        self.npcs = [Imp(self, x, y) if kind == 'imp' else Soldier(self, x, y)
-                     for kind, x, y in self.map.npc_spawns]
+        self.npcs = []
+        self.boss = None
+        for kind, x, y in self.map.npc_spawns:
+            if kind == 'imp':
+                self.npcs.append(Imp(self, x, y))
+            elif kind == 'soldier':
+                self.npcs.append(Soldier(self, x, y))
+            else:
+                self.boss = Cyberdemon(self, x, y)
+                self.npcs.append(self.boss)
+        if self.boss is not None:
+            self.map.lock_exit()
         self.items = [Pickup(self, k, x, y) for k, x, y in self.map.item_spawns]
         self.torches = [Torch(self, x, y) for x, y in self.map.torch_spawns]
         self.projectiles = []
@@ -133,7 +143,10 @@ class Game:
         self.paused = False
         self._set_state('play')
         self.sound_mgr.start_music()
-        self.show_message(f"ENTERING LEVEL {self.level} - FIND THE GREEN EXIT SWITCH")
+        if self.boss is not None:
+            self.show_message(f"LEVEL {self.level} - THE CYBERDEMON GUARDS THE EXIT")
+        else:
+            self.show_message(f"ENTERING LEVEL {self.level} - FIND THE GREEN EXIT SWITCH")
 
     def _set_state(self, st):
         self.state = st
@@ -158,8 +171,13 @@ class Game:
             if n.alive:
                 n.hear(x, y, radius)
 
-    def on_npc_killed(self):
+    def on_npc_killed(self, npc):
         self.kills += 1
+        if getattr(npc, 'is_boss', False):
+            self.map.unlock_exit()
+            self.sound_mgr.play('exit')
+            self.show_message("THE EXIT SWITCH HAS POWERED ON")
+            self.effects.append(Explosion(self, npc.x, npc.y, scale=1.1))
 
     def on_player_death(self):
         self._set_state('gameover')
@@ -204,7 +222,10 @@ class Game:
                     self.show_message(it.message)
             for ex in self.map.exit_cells:
                 if math.hypot(ex[0] - p.x, ex[1] - p.y) < EXIT_TRIGGER_DIST:
-                    self.win_level()
+                    if self.map.exit_locked:
+                        self.show_message("SEALED! SLAY THE CYBERDEMON FIRST")
+                    else:
+                        self.win_level()
                     break
         self.message_t -= dt
 
@@ -314,6 +335,10 @@ class Game:
                     self.weapons.select(0)
                 elif e.key == pygame.K_2:
                     self.weapons.select(1)
+                elif e.key == pygame.K_3:
+                    self.weapons.select(2)
+                elif e.key == pygame.K_4:
+                    self.weapons.select(3)
             else:                                    # gameover / win
                 if e.key in (pygame.K_r, pygame.K_RETURN, pygame.K_SPACE):
                     self.new_game(next_level=(self.state == 'win'))

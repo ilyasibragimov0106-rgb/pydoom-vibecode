@@ -107,6 +107,24 @@ def _switch_tex():
     return _u8(img)
 
 
+def _locked_tex():
+    """Sealed exit switch: dark panel with a big red X (boss levels)."""
+    img = _tech_tex().astype(np.float32)
+    img[16:48, 20:44] = np.array([40, 34, 34], np.float32)
+    img[16:48, 20:23] = 70
+    img[16:48, 41:44] = 22
+    img[16:19, 20:44] = 72
+    img[45:48, 20:44] = 24
+    red = np.array([170, 30, 26], np.float32)
+    for t in range(22):
+        img[21 + t, 23 + t] = red
+        img[21 + t, 41 - t] = red
+        img[21 + t, 24 + t] = red * 0.8
+        img[21 + t, 40 - t] = red * 0.8
+    img += _RNG.normal(0, 4, (TEX, TEX, 1))
+    return _u8(img)
+
+
 def _floor_tex():
     r, c = np.mgrid[0:TEX, 0:TEX].astype(np.float32)
     tile_id = (r // 32).astype(np.int32) * 7 + (c // 32).astype(np.int32)
@@ -354,6 +372,78 @@ SOLDIER_DIE = [_paint_soldier(squash=0.3, pain=True),
                _paint_soldier(lie=True, blood=True)]
 
 
+# ------------------------------------------------------------- cyberdemon ---
+C_CYB = (138, 118, 86)
+C_CYB_D = (98, 84, 62)
+C_CYB_B = (172, 152, 112)
+C_METAL = (86, 88, 96)
+C_REDEYE = (235, 45, 30)
+
+
+def _paint_cyber(swing=0, fire=False, squash=0.0, lie=False, blood=False,
+                 pain=False):
+    cv = _canvas()
+    if lie:
+        _ellipse(cv, 30, 57, 20, 7, C_CYB)
+        _ellipse(cv, 24, 56, 9, 5, C_CYB_B)
+        _ellipse(cv, 48, 55, 8, 6, C_CYB)
+        _rect(cv, 49, 53, 51, 54, (30, 10, 8))
+        _rect(cv, 40, 49, 50, 52, C_METAL)          # cannon on the ground
+        if blood:
+            _ellipse(cv, 32, 62, 22, 3, C_BLOOD)
+        return cv
+    sq = squash
+    bcy = 40 + 10 * sq
+    brx = 16 + 3 * sq
+    bry = max(4.0, 14 * (1 - 0.55 * sq))
+    hcy = 22 + 16 * sq
+    lry = max(3.0, 9 * (1 - 0.5 * sq))
+    ih = int(round(hcy))
+    ib = int(round(bcy))
+    _ellipse(cv, 24 + swing, 53 + 2 * sq, 4.5, lry, C_CYB_D)
+    _ellipse(cv, 40 - swing, 53 + 2 * sq, 4.5, lry, C_CYB_D)
+    _ellipse(cv, 24 + swing, 61 + 2 * sq, 5, 2.6, C_BOOT)
+    _ellipse(cv, 40 - swing, 61 + 2 * sq, 5, 2.6, C_BOOT)
+    _ellipse(cv, 13, bcy + 2 + swing, 4, 9 * (1 - 0.4 * sq), C_CYB_D)
+    _ellipse(cv, 32, bcy, brx, bry, C_CYB)
+    _ellipse(cv, 32, bcy + bry * 0.25, brx * 0.55, bry * 0.6, C_CYB_B)
+    if fire:                                         # cannon raised + flash
+        _ellipse(cv, 50, bcy - 4, 4.5, 7, C_CYB_D)
+        _rect(cv, 47, ib - 22, 53, ib - 8, C_METAL)
+        _ellipse(cv, 50, bcy - 23, 4.5, 3, (255, 150, 40))
+        _ellipse(cv, 50, bcy - 23, 2.5, 2, (255, 230, 150))
+    else:
+        _ellipse(cv, 50, bcy - 2 + swing, 4.5, 9 * (1 - 0.4 * sq), C_CYB_D)
+        _rect(cv, 47, ib - 16, 53, ib - 2, C_METAL)
+        _ellipse(cv, 50, bcy - 17, 3.5, 2.5, (40, 40, 44))
+    _ellipse(cv, 32, hcy, 10, 9, C_CYB)
+    _line(cv, 24, hcy - 7, 18, hcy - 16, C_HORN, 2)
+    _line(cv, 40, hcy - 7, 46, hcy - 16, C_HORN, 2)
+    if pain or sq > 0.4:
+        _rect(cv, 27, ih - 2, 29, ih - 1, (40, 12, 8))
+        _rect(cv, 35, ih - 2, 37, ih - 1, (40, 12, 8))
+    else:
+        _rect(cv, 27, ih - 3, 29, ih - 2, C_REDEYE)
+        _rect(cv, 35, ih - 3, 37, ih - 2, C_REDEYE)
+    _rect(cv, 28, ih + 4, 37, ih + 5, (44, 14, 10))
+    _px(cv, 29, ih + 4, C_TEETH)
+    _px(cv, 32, ih + 4, C_TEETH)
+    _px(cv, 35, ih + 4, C_TEETH)
+    if pain:
+        _pain_tint(cv)
+    return cv
+
+
+CYBER_WALK = [_paint_cyber(swing=s) for s in (-2, 0, 2, 0)]
+CYBER_ATTACK = [_paint_cyber(), _paint_cyber(fire=True), _paint_cyber(fire=True)]
+CYBER_PAIN = [_paint_cyber(pain=True, squash=0.1)]
+CYBER_DIE = [_paint_cyber(squash=0.3, pain=True),
+             _paint_cyber(squash=0.6, pain=True),
+             _paint_cyber(squash=0.85, pain=True),
+             _paint_cyber(lie=True),
+             _paint_cyber(lie=True, blood=True)]
+
+
 # ------------------------------------------------------------------ items ---
 def _paint_medkit():
     cv = _canvas()
@@ -424,8 +514,53 @@ def _paint_explosion(i):
     return cv
 
 
+def _paint_cells():
+    cv = _canvas()
+    _rect(cv, 22, 46, 42, 62, (44, 52, 110))
+    _rect(cv, 22, 46, 42, 48, (70, 80, 150))
+    for i in range(3):
+        _rect(cv, 25 + i * 5, 42, 27 + i * 5, 47, (90, 210, 255))
+        _px(cv, 26 + i * 5, 42, (200, 245, 255))
+    _rect(cv, 25, 54, 39, 56, (24, 30, 70))
+    return cv
+
+
+def _paint_plasma(r):
+    cv = _canvas()
+    _ellipse(cv, 32, 32, r + 2, r + 2, (40, 90, 220))
+    _ellipse(cv, 32, 32, r, r, (90, 170, 255))
+    _ellipse(cv, 32, 32, max(1, r - 3), max(1, r - 3), (220, 245, 255))
+    return cv
+
+
+def _paint_plasma_explosion(i):
+    cv = _canvas()
+    if i == 0:
+        _ellipse(cv, 32, 32, 8, 8, (140, 220, 255))
+        _ellipse(cv, 32, 32, 4, 4, (240, 252, 255))
+    elif i == 1:
+        _ellipse(cv, 32, 32, 13, 13, (60, 130, 255))
+        _ellipse(cv, 32, 32, 8, 8, (150, 220, 255))
+    else:
+        _ellipse(cv, 32, 32, 15, 15, (50, 60, 110))
+        _ellipse(cv, 32, 32, 10, 10, (30, 40, 70))
+    return cv
+
+
+def _paint_rocket(phase=0):
+    cv = _canvas()
+    r = 9 + phase
+    _ellipse(cv, 32, 32, r, r, (200, 60, 20))
+    _ellipse(cv, 32, 32, r - 3, r - 3, (255, 140, 40))
+    _ellipse(cv, 32, 32, max(1, r - 6), max(1, r - 6), (255, 220, 120))
+    for sx, sy in ((20, 24 + phase), (44, 40 - phase), (24, 44)):
+        _px(cv, sx, sy, (255, 180, 80))
+    return cv
+
+
 # -------------------------------------------------------------- assembly ----
-WALL_TEXTURES = [_brick_tex(), _tech_tex(), _stone_tex(), _switch_tex()]
+WALL_TEXTURES = [_brick_tex(), _tech_tex(), _stone_tex(), _switch_tex(),
+                 _locked_tex()]
 WALL_LUTS = [_shade_lut(w) for w in WALL_TEXTURES]
 
 FLOOR_TEX = _u8(_floor_tex().astype(np.float32) * 0.92)
@@ -445,7 +580,16 @@ SPRITES = {
     'medkit': [_paint_medkit()],
     'bullets': [_paint_bullets()],
     'shells': [_paint_shells()],
+    'cells': [_paint_cells()],
     'torch': [_paint_torch(0), _paint_torch(1)],
     'fireball': [_paint_fireball(6), _paint_fireball(8)],
+    'plasma': [_paint_plasma(5), _paint_plasma(6.5)],
+    'plasma_explosion': [_paint_plasma_explosion(0), _paint_plasma_explosion(1),
+                         _paint_plasma_explosion(2)],
+    'rocket': [_paint_rocket(0), _paint_rocket(2)],
     'explosion': [_paint_explosion(0), _paint_explosion(1), _paint_explosion(2)],
+    'cyber_walk': CYBER_WALK,
+    'cyber_attack': CYBER_ATTACK,
+    'cyber_pain': CYBER_PAIN,
+    'cyber_die': CYBER_DIE,
 }

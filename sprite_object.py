@@ -1,6 +1,7 @@
 """Billboard sprite base class plus pickups and decorative torches."""
-from settings import (PLAYER_MAX_HEALTH, MAX_BULLETS, MAX_SHELLS,
-                      MEDKIT_HEALTH, BULLETS_PICKUP, SHELLS_PICKUP)
+from settings import (PLAYER_MAX_HEALTH, MAX_BULLETS, MAX_SHELLS, MAX_CELLS,
+                      MEDKIT_HEALTH, BULLETS_PICKUP, SHELLS_PICKUP,
+                      CELLS_PICKUP)
 from textures import SPRITES
 
 
@@ -25,6 +26,7 @@ _PICKUP_MESSAGES = {
     'medkit': "PICKED UP A MEDIKIT",
     'bullets': "PICKED UP A BOX OF BULLETS",
     'shells': "PICKED UP A BOX OF SHOTGUN SHELLS",
+    'cells': "PICKED UP A PLASMA CELL PACK",
 }
 
 
@@ -47,6 +49,11 @@ class Pickup(SpriteObject):
             if player.bullets >= MAX_BULLETS:
                 return False
             player.add_bullets(BULLETS_PICKUP)
+            return True
+        if self.kind == 'cells':
+            if player.cells >= MAX_CELLS:
+                return False
+            player.add_cells(CELLS_PICKUP)
             return True
         if player.shells >= MAX_SHELLS:
             return False

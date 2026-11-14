@@ -13,6 +13,7 @@ import time
 
 import pygame
 
+from npc import Rocket
 from settings import MOUSE_SENS
 
 import levelgen
@@ -184,6 +185,80 @@ def main():
     # --- menu -------------------------------------------------------------------
     g.state = "menu"
     g.render()
+
+    # --- chainsaw kills up close -------------------------------------------------
+    g.new_game()
+    for n in g.npcs:
+        n.health = 9999
+        n.x, n.y = 40.0, 40.0
+    npc = g.npcs[0]
+    npc.health = 30
+    assert place_in_front(g, npc, 1.0)
+    g.weapons.select(2)
+    ticks = 0
+    while npc.alive and ticks < 200:
+        g.weapons.cooldown = 0.0
+        g.weapons.update(1 / 60, True)
+        ticks += 1
+    assert not npc.alive, "chainsaw failed to kill npc"
+    print(f"chainsaw killed npc in {ticks} ticks")
+
+    # --- plasma bolt flies and kills ---------------------------------------------
+    npc = g.npcs[1]
+    npc.health = 12                 # one plasma bolt (15 dmg) is enough
+    assert place_in_front(g, npc, 4.0)
+    g.weapons.select(3)
+    p.cells = 50
+    g.weapons.cooldown = 0.0
+    g.weapons.fire()
+    assert g.projectiles, "plasma did not spawn a bolt"
+    died = False
+    for _ in range(120):
+        g.update(1 / 60)
+        if not npc.alive:
+            died = True
+            break
+    assert died, "plasma bolt never killed the npc"
+    print("plasma bolt ok")
+
+    # --- boss level 5: exit sealed until the cyberdemon dies ----------------------
+    g.new_game(fresh=True)
+    while g.level < 5:
+        g.new_game(next_level=True)
+    assert g.level == 5 and g.boss is not None, "no cyberdemon on level 5"
+    assert g.map.exit_locked
+    ex = g.map.exit_cells[0]
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        fx, fy = ex[0] + dx, ex[1] + dy
+        if not g.map.is_wall(fx, fy):
+            break
+    g.player.x, g.player.y = fx, fy
+    g.update(1 / 60)
+    assert g.state == "play", "exit opened while the boss is alive"
+    assert "SEALED" in g.message
+    # the boss wakes up and attacks
+    attacked = False
+    for _ in range(240):
+        g.player.health = 100
+        g.update(1 / 60)
+        if g.boss.attack_done or any(isinstance(pr, Rocket) for pr in g.projectiles):
+            attacked = True
+            break
+    assert attacked, "cyberdemon never attacked"
+    # kill the boss -> exit unlocks -> win
+    assert place_in_front(g, g.boss, 2.5)
+    g.boss.health = 5
+    g.weapons.select(0)
+    g.weapons.cooldown = 0.0
+    g.weapons.fire()
+    assert not g.boss.alive, "boss survived the shot"
+    assert not g.map.exit_locked, "exit did not unlock after boss death"
+    g.player.x, g.player.y = fx, fy
+    g.update(1 / 60)
+    assert g.state == "win"
+    g.new_game(next_level=True)
+    assert g.level == 6 and g.boss is None and not g.map.exit_locked
+    print("boss gate ok (level 5 sealed -> kill -> win -> level 6)")
 
     # --- AI soak: everyone fights for 10 simulated seconds ----------------------
     g.new_game()

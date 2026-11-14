@@ -6,7 +6,8 @@ import pygame
 from map import move_with_collision
 from settings import (PLAYER_SPEED, PLAYER_STRAFE_SPEED, MOUSE_SENS,
                       PLAYER_RADIUS, PLAYER_MAX_HEALTH, START_BULLETS,
-                      START_SHELLS, MAX_BULLETS, MAX_SHELLS)
+                      START_SHELLS, START_CELLS, MAX_BULLETS, MAX_SHELLS,
+                      MAX_CELLS)
 
 
 class Player:
@@ -18,6 +19,7 @@ class Player:
         self.health = PLAYER_MAX_HEALTH
         self.bullets = START_BULLETS
         self.shells = START_SHELLS
+        self.cells = START_CELLS
         self.alive = True
         self.pain_t = 0.0          # pain face timer
         self.hurt_flash = 0.0      # red screen flash
@@ -84,3 +86,6 @@ class Player:
 
     def add_shells(self, n):
         self.shells = min(MAX_SHELLS, self.shells + n)
+
+    def add_cells(self, n):
+        self.cells = min(MAX_CELLS, self.cells + n)

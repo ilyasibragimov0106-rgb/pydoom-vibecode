@@ -140,10 +140,11 @@ class Hud:
         scr.blit(self.panel, (0, y0))
         wm = g.weapons
 
-        ammo = getattr(p, wm.current.ammo_attr)
-        scr.blit(bitmap(str(ammo), 6), (28, y0 + 28))
+        cur = wm.current
+        ammo_txt = str(getattr(p, cur.ammo_attr)) if cur.ammo_attr else "-"
+        scr.blit(bitmap(ammo_txt, 6), (28, y0 + 28))
         scr.blit(self.small.render("AMMO", True, (150, 150, 158)), (30, y0 + 12))
-        scr.blit(self.small.render(wm.current.name, True, (200, 170, 80)), (28, y0 + 78))
+        scr.blit(self.small.render(cur.name, True, (200, 170, 80)), (28, y0 + 78))
 
         scr.blit(bitmap(f"{int(p.health)}%", 6), (196, y0 + 28))
         scr.blit(self.small.render("HEALTH", True, (150, 150, 158)), (198, y0 + 12))
@@ -152,19 +153,19 @@ class Hud:
         scr.blit(face, (442, y0 + 16))
 
         scr.blit(self.small.render("ARMS", True, (150, 150, 158)), (596, y0 + 12))
-        for i in (0, 1):
-            bx = 596 + i * 64
+        for i in range(4):
+            bx = 588 + i * 46
             active = (wm.index == i)
             col = (200, 170, 60) if active else (90, 90, 98)
-            pygame.draw.rect(scr, (30, 30, 36), (bx, y0 + 34, 46, 46))
-            pygame.draw.rect(scr, col, (bx, y0 + 34, 46, 46), 2)
+            pygame.draw.rect(scr, (30, 30, 36), (bx, y0 + 34, 40, 46))
+            pygame.draw.rect(scr, col, (bx, y0 + 34, 40, 46), 2)
             scr.blit(bitmap(str(i + 1), 3, (210, 190, 120) if active else (130, 130, 140)),
-                     (bx + 16, y0 + 46))
+                     (bx + 13, y0 + 48))
 
-        scr.blit(self.small.render("BULL", True, (150, 150, 158)), (826, y0 + 16))
-        scr.blit(bitmap(str(p.bullets), 3), (900, y0 + 14))
-        scr.blit(self.small.render("SHEL", True, (150, 150, 158)), (826, y0 + 58))
-        scr.blit(bitmap(str(p.shells), 3), (900, y0 + 56))
+        for label, val, yy in (("BULL", p.bullets, 12), ("SHEL", p.shells, 38),
+                               ("CELL", p.cells, 64)):
+            scr.blit(self.small.render(label, True, (150, 150, 158)), (826, y0 + yy + 2))
+            scr.blit(bitmap(str(val), 2), (884, y0 + yy))
 
         scr.blit(self.small.render("KILLS", True, (150, 150, 158)), (1026, y0 + 16))
         scr.blit(bitmap(f"{g.kills}/{g.total_npcs}", 3), (1026, y0 + 40))
@@ -173,3 +174,14 @@ class Hud:
         scr.blit(self.small.render("R-RESTART", True, (130, 130, 140)), (1156, y0 + 22))
         scr.blit(self.small.render("TAB-MAP", True, (130, 130, 140)), (1156, y0 + 44))
         scr.blit(self.small.render("M-MUSIC", True, (130, 130, 140)), (1156, y0 + 66))
+
+        # boss health bar
+        boss = g.boss
+        if boss is not None and boss.alive and boss.state != 'idle':
+            frac = max(0.0, boss.health / boss.max_health)
+            bw = 420
+            bx0 = WIDTH // 2 - bw // 2
+            pygame.draw.rect(scr, (30, 4, 4), (bx0, 24, bw, 18))
+            pygame.draw.rect(scr, (200, 30, 20), (bx0 + 2, 26, int((bw - 4) * frac), 14))
+            lbl = self.small.render("CYBERDEMON", True, (255, 120, 90))
+            scr.blit(lbl, (WIDTH // 2 - lbl.get_width() // 2, 46))

@@ -142,6 +142,40 @@ def _build_sounds():
                           (_sine(659, 0.12) * env12, 0.12),
                           (_sine(784, 0.20) * env20, 0.24)), 0.6)
     s['menu_blip'] = _snd(_sine(440, 0.05) * _env(int(RATE * 0.05), 0.004, 25), 0.5)
+
+    # --- chainsaw / plasma / cyberdemon ---------------------------------------
+    n12 = int(RATE * 0.12)
+    motor = (_lp(_saw(72, 0.12), 5) * _env(n12, 0.01, 3)
+             + _lp(_noise(0.12, 96), 6) * _env(n12, 0.01, 4) * 0.3)
+    s['saw'] = _snd(motor, 0.4)
+    hit_sq = _lp(_noise(0.10, 97), 3) * _env(int(RATE * 0.10), 0.002, 22)
+    s['saw_hit'] = _snd(_mix((motor, 0), (hit_sq, 0.02),
+                             (_sine(90, 0.10, sweep_to=50)
+                              * _env(int(RATE * 0.10), 0.002, 18) * 0.6, 0)), 0.65)
+
+    zap = _sine(1150, 0.16, sweep_to=190) * _env(int(RATE * 0.16), 0.002, 16)
+    hum = _saw(620, 0.14, sweep=0.35) * _env(int(RATE * 0.14), 0.002, 20) * 0.35
+    s['plasma'] = _snd(_mix((zap, 0), (hum, 0.01)), 0.6)
+    pzap = _sine(700, 0.10, sweep_to=140) * _env(int(RATE * 0.10), 0.002, 22)
+    s['plasma_hit'] = _snd(_mix((pzap, 0),
+                                (_lp(_noise(0.08, 95), 4)
+                                 * _env(int(RATE * 0.08), 0.002, 26) * 0.5, 0)), 0.5)
+
+    n90 = int(RATE * 0.9)
+    s['cyber_sight'] = _snd(_mix((_saw(64, 0.9, sweep=0.55) * _env(n90, 0.02, 5), 0),
+                                 (_lp(_noise(0.9, 98), 5) * _env(n90, 0.02, 6) * 0.4, 0)), 0.9)
+    s['cyber_pain'] = _snd(_saw(92, 0.28, sweep=0.65)
+                           * _env(int(RATE * 0.28), 0.01, 10), 0.75)
+    n11 = int(RATE * 1.1)
+    s['cyber_die'] = _snd(_mix((_saw(78, 1.1, sweep=0.2) * _env(n11, 0.02, 4), 0),
+                               (_lp(_noise(1.1, 99), 6) * _env(n11, 0.02, 4) * 0.5, 0),
+                               (_sine(50, 1.0, sweep_to=28)
+                                * _env(int(RATE * 1.0), 0.01, 5) * 0.8, 0)), 0.95)
+    rk = _lp(_noise(0.4, 105), 5) * np.linspace(0.15, 1, int(RATE * 0.4),
+                                                dtype=np.float32) ** 2
+    s['rocket'] = _snd(_mix((rk, 0),
+                            (_sine(60, 0.3, sweep_to=32)
+                             * _env(int(RATE * 0.3), 0.01, 8) * 0.7, 0)), 0.7)
     return s
 
 

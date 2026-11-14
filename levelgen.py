@@ -158,7 +158,16 @@ def _build(rng, level):
         return picked
 
     total_npcs = min(6 + 2 * (level - 1), 16)
-    n_sold = int(round(total_npcs * min(0.2 + 0.08 * (level - 1), 0.55)))
+    boss = (level % 5 == 0)
+    if boss:
+        # the cyberdemon guards the exit room; fewer regular adds
+        bx, by = _center(exit_room)
+        g[by][bx] = 'B'
+        used.add((bx, by))
+        total_npcs = 4 + min(level // 5, 3)
+        n_sold = total_npcs // 3
+    else:
+        n_sold = int(round(total_npcs * min(0.2 + 0.08 * (level - 1), 0.55)))
     for x, y in pick(total_npcs - n_sold, 8):
         g[y][x] = 'I'
     for x, y in pick(n_sold, 9):
@@ -167,8 +176,10 @@ def _build(rng, level):
         g[y][x] = 'M'
     for x, y in pick(3, 4):
         g[y][x] = 'A'
-    for x, y in pick(2 + min(level - 1, 3), 5):
+    for x, y in pick(2 + min(level - 1, 3) + (2 if boss else 0), 5):
         g[y][x] = 'G'
+    for x, y in pick(2 + min(level - 1, 2) + (2 if boss else 0), 4):
+        g[y][x] = 'C'
     for x, y in pick(5 + rng.randint(0, 3), 0):
         g[y][x] = 'T'
 

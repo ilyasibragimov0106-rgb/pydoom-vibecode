@@ -1,8 +1,9 @@
 """Level data, grid queries, DDA ray helpers and shared collision movement.
 
 Map legend:  1 brick wall, 2 tech wall, 3 stone wall, X exit switch (tex 4),
-             P player start, I imp, S soldier, M medkit, A bullets, G shells,
-             T torch, . empty floor.
+             5 sealed exit switch (boss levels),
+             P player start, I imp, S soldier, B cyberdemon boss,
+             M medkit, A bullets, G shells, C plasma cells, T torch, . floor.
 """
 import math
 
@@ -34,6 +35,7 @@ MAP_DATA = [
 ]
 
 WALL_TEX = {'1': 1, '2': 2, '3': 3, '4': 4, 'X': 4}
+LOCKED_EXIT = 5
 
 
 class GameMap:
@@ -63,6 +65,7 @@ class GameMap:
         self.item_spawns = []
         self.torch_spawns = []
         self.exit_cells = []
+        self.exit_locked = False
         for y, row in enumerate(rows):
             for x, ch in enumerate(row):
                 cx, cy = x + 0.5, y + 0.5
@@ -72,12 +75,16 @@ class GameMap:
                     self.npc_spawns.append(('imp', cx, cy))
                 elif ch == 'S':
                     self.npc_spawns.append(('soldier', cx, cy))
+                elif ch == 'B':
+                    self.npc_spawns.append(('cyber', cx, cy))
                 elif ch == 'M':
                     self.item_spawns.append(('medkit', cx, cy))
                 elif ch == 'A':
                     self.item_spawns.append(('bullets', cx, cy))
                 elif ch == 'G':
                     self.item_spawns.append(('shells', cx, cy))
+                elif ch == 'C':
+                    self.item_spawns.append(('cells', cx, cy))
                 elif ch == 'T':
                     self.torch_spawns.append((cx, cy))
                 elif ch == 'X':
@@ -85,6 +92,22 @@ class GameMap:
         if self.player_start is None:
             raise ValueError("map has no player start 'P'")
         self._validate_reachable()
+
+    # ------------------------------------------------------ exit sealing ---
+    def lock_exit(self):
+        """Boss levels: the switch is dead (texture 5) until the boss dies."""
+        self.exit_locked = True
+        for row in self.grid:
+            for i, v in enumerate(row):
+                if v == 4:
+                    row[i] = LOCKED_EXIT
+
+    def unlock_exit(self):
+        self.exit_locked = False
+        for row in self.grid:
+            for i, v in enumerate(row):
+                if v == LOCKED_EXIT:
+                    row[i] = 4
 
     # ------------------------------------------------------------ queries --
     def cell(self, ix, iy):
