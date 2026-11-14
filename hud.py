@@ -167,7 +167,8 @@ class Hud:
         scr.blit(bitmap(str(p.shells), 3), (900, y0 + 56))
 
         scr.blit(self.small.render("KILLS", True, (150, 150, 158)), (1026, y0 + 16))
-        scr.blit(bitmap(f"{g.kills}/{g.total_npcs}", 3), (1026, y0 + 44))
+        scr.blit(bitmap(f"{g.kills}/{g.total_npcs}", 3), (1026, y0 + 40))
+        scr.blit(self.small.render(f"LVL {g.level}", True, (200, 170, 80)), (1096, y0 + 44))
 
         scr.blit(self.small.render("R-RESTART", True, (130, 130, 140)), (1156, y0 + 22))
         scr.blit(self.small.render("TAB-MAP", True, (130, 130, 140)), (1156, y0 + 44))

@@ -87,7 +87,7 @@ class Raycaster:
         side = np.zeros(W, np.int8)
         hit = np.zeros(W, np.int32)
         gp = self._grid_pad
-        for _ in range(64):
+        for _ in range(96):              # >= diagonal crossings of a 30x30 map
             if not active.any():
                 break
             go_x = active & (side_x < side_y)

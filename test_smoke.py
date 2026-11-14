@@ -8,13 +8,28 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
+import math
 import time
 
 import pygame
 
 from settings import MOUSE_SENS
 
+import levelgen
 import main as game_mod
+
+
+def place_in_front(g, npc, dist):
+    """Teleport npc into the player's view at `dist` tiles with clear LOS."""
+    p = g.player
+    for ang in (0.0, math.pi / 2, math.pi, -math.pi / 2):
+        tx = p.x + math.cos(ang) * dist
+        ty = p.y + math.sin(ang) * dist
+        if not g.map.is_wall(tx, ty) and g.map.line_of_sight(p.x, p.y, tx, ty):
+            npc.x, npc.y = tx, ty
+            p.angle = ang
+            return True
+    return False
 
 
 def main():
@@ -127,6 +142,44 @@ def main():
     g.update(1 / 60)
     assert g.state == "win"
     g.render()
+
+    # --- endless generation: next level is procedural --------------------------
+    g.new_game(next_level=True)
+    assert g.level == 2 and g.state == "play"
+    assert g.map.exit_cells, "generated level has no exit switch"
+    for n in g.npcs:
+        n.health = 9999
+        n.x, n.y = 40.0, 40.0
+    npc = g.npcs[0]
+    npc.health = 60
+    assert place_in_front(g, npc, 2.5), "no open line of sight near the spawn"
+    shots = 0
+    while npc.alive and shots < 40:
+        g.weapons.cooldown = 0.0
+        g.weapons.fire()
+        shots += 1
+    assert not npc.alive, "pistol failed on a generated level"
+    print(f"generated level 2 playable, npc killed in {shots} shots")
+
+    # win it and descend to level 3
+    ex = g.map.exit_cells[0]
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        fx, fy = ex[0] + dx, ex[1] + dy
+        if not g.map.is_wall(fx, fy):
+            break
+    g.player.x, g.player.y = fx, fy
+    g.update(1 / 60)
+    assert g.state == "win"
+    g.new_game(next_level=True)
+    assert g.level == 3
+    print("level chaining ok (2 -> 3)")
+
+    # generation stress: 10 more levels must parse and validate
+    for lvl in range(4, 14):
+        rows = levelgen.generate_level(lvl, seed=1000 + lvl)
+        m = game_mod.GameMap(rows)
+        assert m.exit_cells and m.player_start
+    print("generation stress ok (levels 4..13)")
 
     # --- menu -------------------------------------------------------------------
     g.state = "menu"

@@ -37,10 +37,14 @@ WALL_TEX = {'1': 1, '2': 2, '3': 3, '4': 4, 'X': 4}
 
 
 class GameMap:
-    """Parses MAP_DATA once, validates it and answers grid queries."""
+    """Parses map rows (classic MAP_DATA by default, or levelgen output),
+    validates them and answers grid queries."""
 
-    def __init__(self):
-        rows = [r for r in MAP_DATA if r.strip()]
+    def __init__(self, rows=None):
+        if rows is None:
+            rows = MAP_DATA
+        rows = [r for r in rows if r.strip()]
+        self.rows = rows
         self.h = len(rows)
         self.w = len(rows[0])
         for i, r in enumerate(rows):

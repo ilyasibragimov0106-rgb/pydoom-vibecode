@@ -19,6 +19,13 @@ from sprite_object import SpriteObject
 from textures import SPRITES
 
 
+def _difficulty(game):
+    """(speed multiplier, health multiplier) growing with the level number."""
+    lvl = getattr(game, 'level', 1)
+    return (1.0 + min(0.05 * (lvl - 1), 0.4),
+            1.0 + min(0.08 * (lvl - 1), 0.5))
+
+
 class NPC(SpriteObject):
     walk_key = None
     attack_key = None
@@ -218,8 +225,9 @@ class Imp(NPC):
 
     def __init__(self, game, x, y):
         super().__init__(game, x, y)
-        self.health = IMP_HEALTH
-        self.speed = IMP_SPEED
+        sp_mul, hp_mul = _difficulty(game)
+        self.health = int(IMP_HEALTH * hp_mul)
+        self.speed = IMP_SPEED * sp_mul
         self.attack_range = IMP_ATTACK_RANGE
         self.cd_range = IMP_CD
         self.attack_time = 0.5
@@ -250,8 +258,9 @@ class Soldier(NPC):
 
     def __init__(self, game, x, y):
         super().__init__(game, x, y)
-        self.health = SOLDIER_HEALTH
-        self.speed = SOLDIER_SPEED
+        sp_mul, hp_mul = _difficulty(game)
+        self.health = int(SOLDIER_HEALTH * hp_mul)
+        self.speed = SOLDIER_SPEED * sp_mul
         self.attack_range = SOLDIER_ATTACK_RANGE
         self.cd_range = SOLDIER_CD
         self.attack_time = 0.4

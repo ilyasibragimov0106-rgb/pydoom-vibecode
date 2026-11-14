@@ -4,6 +4,7 @@ Run:  python main.py
 """
 import math
 import os
+import random
 
 import numpy as np
 import pygame
@@ -11,6 +12,7 @@ import pygame
 from settings import (WIDTH, HEIGHT, FPS, TITLE, HUD_H, PICKUP_RANGE,
                       EXIT_TRIGGER_DIST)
 from map import GameMap
+from levelgen import generate_level
 from player import Player
 from raycasting import Raycaster
 from object_renderer import ObjectRenderer
@@ -77,6 +79,8 @@ class Game:
         self.running = True
         self._frame = 0
         self._text_cache = {}
+        self.level = 1
+        self.level_seed = None
         self.map = None
         self.player = None
         self.npcs = []
@@ -93,8 +97,23 @@ class Game:
         self.sound_mgr.start_music()
 
     # ------------------------------------------------------------ setup ----
-    def new_game(self):
-        self.map = GameMap()
+    def new_game(self, fresh=False, next_level=False):
+        """Start a run.  fresh: back to level 1 (from the menu).
+        next_level: descend deeper - generate the next procedural level.
+        Level 1 is the handcrafted map; levels 2..inf are generated.
+        R in-game retries the same level with the same layout (same seed)."""
+        if fresh:
+            self.level = 1
+            self.level_seed = None
+        if next_level:
+            self.level += 1
+            self.level_seed = None
+        if self.level > 1 and self.level_seed is None:
+            self.level_seed = random.getrandbits(32)
+        if self.level == 1:
+            self.map = GameMap()
+        else:
+            self.map = GameMap(generate_level(self.level, seed=self.level_seed))
         sx, sy, sa = self.map.player_start
         self.player = Player(self, sx, sy, sa)
         self.npcs = [Imp(self, x, y) if kind == 'imp' else Soldier(self, x, y)
@@ -114,6 +133,7 @@ class Game:
         self.paused = False
         self._set_state('play')
         self.sound_mgr.start_music()
+        self.show_message(f"ENTERING LEVEL {self.level} - FIND THE GREEN EXIT SWITCH")
 
     def _set_state(self, st):
         self.state = st
@@ -225,7 +245,7 @@ class Game:
                                     True, (110, 110, 120))
         scr.blit(ft, (WIDTH // 2 - ft.get_width() // 2, HEIGHT - 40))
 
-    def _render_end(self, text, color, fire_on):
+    def _render_end(self, text, color, fire_on, prompt):
         scr = self.screen
         scr.fill((12, 6, 6) if fire_on else (8, 10, 8))
         if fire_on:
@@ -233,12 +253,11 @@ class Game:
             self.fire.draw(scr, HEIGHT - 380)
         big = self._big_text(text, 120, color, (30, 6, 4))
         scr.blit(big, (WIDTH // 2 - big.get_width() // 2, 150))
-        stats = self.font_mid.render(f"KILLS: {self.kills} / {self.total_npcs}",
+        stats = self.font_mid.render(f"LEVEL {self.level}   -   KILLS: {self.kills} / {self.total_npcs}",
                                      True, (200, 200, 210))
         scr.blit(stats, (WIDTH // 2 - stats.get_width() // 2, 310))
         if (pygame.time.get_ticks() // 500) % 2 == 0:
-            pr = self.font_mid.render("R / ENTER - RESTART      ESC - MENU",
-                                      True, (230, 190, 60))
+            pr = self.font_mid.render(prompt, True, (230, 190, 60))
             scr.blit(pr, (WIDTH // 2 - pr.get_width() // 2, 390))
 
     def render(self):
@@ -258,9 +277,11 @@ class Game:
         elif self.state == 'menu':
             self._render_menu()
         elif self.state == 'gameover':
-            self._render_end("YOU DIED", (200, 30, 20), True)
+            self._render_end("YOU DIED", (200, 30, 20), True,
+                             "R / ENTER - RETRY LEVEL      ESC - MENU")
         elif self.state == 'win':
-            self._render_end("LEVEL CLEARED", (80, 200, 90), False)
+            self._render_end(f"LEVEL {self.level} CLEARED", (80, 200, 90), False,
+                             "ENTER / R - GO DEEPER      ESC - MENU")
         pygame.display.flip()
 
     # ------------------------------------------------------------- input ---
@@ -272,7 +293,7 @@ class Game:
             if self.state == 'menu':
                 if e.key in (pygame.K_RETURN, pygame.K_SPACE):
                     self.sound_mgr.play('menu_blip')
-                    self.new_game()
+                    self.new_game(fresh=True)
                 elif e.key == pygame.K_ESCAPE:
                     self.running = False
                 elif e.key == pygame.K_m:
@@ -295,7 +316,7 @@ class Game:
                     self.weapons.select(1)
             else:                                    # gameover / win
                 if e.key in (pygame.K_r, pygame.K_RETURN, pygame.K_SPACE):
-                    self.new_game()
+                    self.new_game(next_level=(self.state == 'win'))
                 elif e.key == pygame.K_ESCAPE:
                     self._set_state('menu')
         elif e.type == pygame.MOUSEMOTION:
@@ -304,7 +325,7 @@ class Game:
                     and self.player is not None and self.player.alive):
                 self.player.turn(e.rel[0])
         elif e.type == pygame.MOUSEBUTTONDOWN and self.state == 'menu':
-            self.new_game()
+            self.new_game(fresh=True)
 
     # --------------------------------------------------------------- run ---
     def run(self):
