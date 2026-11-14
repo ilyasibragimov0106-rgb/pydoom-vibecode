@@ -142,6 +142,10 @@ def _build_sounds():
                           (_sine(659, 0.12) * env12, 0.12),
                           (_sine(784, 0.20) * env20, 0.24)), 0.6)
     s['menu_blip'] = _snd(_sine(440, 0.05) * _env(int(RATE * 0.05), 0.004, 25), 0.5)
+    env8 = _env(int(RATE * 0.08), 0.004, 14)
+    s['cheat'] = _snd(_mix((_sine(660, 0.08) * env8, 0),
+                           (_sine(880, 0.08) * env8, 0.08),
+                           (_sine(1100, 0.14) * _env(int(RATE * 0.14), 0.004, 10), 0.16)), 0.6)
 
     # --- chainsaw / plasma / cyberdemon ---------------------------------------
     n12 = int(RATE * 0.12)

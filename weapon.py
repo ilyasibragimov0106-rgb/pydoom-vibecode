@@ -208,11 +208,14 @@ class WeaponManager:
         g = self.game
         p = g.player
         w = self.current
-        if getattr(p, w.ammo_attr) <= 0:
+        infinite = getattr(g, 'cheat_ammo', False)
+        ammo = getattr(p, w.ammo_attr)
+        if ammo <= 0 and not infinite:
             g.sound_mgr.play('empty', 0.7)
             self.cooldown = 0.3
             return
-        setattr(p, w.ammo_attr, getattr(p, w.ammo_attr) - 1)
+        if not infinite:
+            setattr(p, w.ammo_attr, ammo - 1)
         g.sound_mgr.play(w.sound)
         self.cooldown = w.cooldown
         self.anim_t = 0.0

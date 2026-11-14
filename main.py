@@ -81,6 +81,13 @@ class Game:
         self._text_cache = {}
         self.level = 1
         self.level_seed = None
+        self.key_buffer = []
+        self.cheat_ammo = False
+        self.cheat_health = False
+        self.cheat_codes = (
+            ("sadsadwwsad", "ammo"),
+            ("wswswsadadad", "health"),
+        )
         self.map = None
         self.player = None
         self.npcs = []
@@ -141,6 +148,7 @@ class Game:
         self.message = ''
         self.message_t = 0.0
         self.paused = False
+        self.key_buffer = []
         self._set_state('play')
         self.sound_mgr.start_music()
         if self.boss is not None:
@@ -320,6 +328,7 @@ class Game:
                 elif e.key == pygame.K_m:
                     self.sound_mgr.toggle_music()
             elif self.state == 'play':
+                self._feed_cheat_buffer(e)
                 if e.key == pygame.K_ESCAPE:
                     self._set_state('menu')
                 elif e.key == pygame.K_r:
@@ -351,6 +360,33 @@ class Game:
                 self.player.turn(e.rel[0])
         elif e.type == pygame.MOUSEBUTTONDOWN and self.state == 'menu':
             self.new_game(fresh=True)
+
+    # ------------------------------------------------------------- cheats --
+    def _feed_cheat_buffer(self, e):
+        """Collect letter keydowns and watch for the secret sequences.
+        Physical key names are used so the codes work on any layout."""
+        name = pygame.key.name(e.key).lower()
+        if len(name) == 1 and name.isalpha():
+            self.key_buffer.append(name)
+            if len(self.key_buffer) > 16:
+                self.key_buffer = self.key_buffer[-16:]
+            self._check_cheats()
+
+    def _check_cheats(self):
+        typed = ''.join(self.key_buffer)
+        for code, kind in self.cheat_codes:
+            if typed.endswith(code):
+                self.key_buffer = []
+                if kind == 'ammo':
+                    self.cheat_ammo = not self.cheat_ammo
+                    self.show_message("INFINITE AMMO ENABLED" if self.cheat_ammo
+                                      else "INFINITE AMMO DISABLED")
+                else:
+                    self.cheat_health = not self.cheat_health
+                    self.show_message("GOD MODE ENABLED" if self.cheat_health
+                                      else "GOD MODE DISABLED")
+                self.sound_mgr.play('cheat')
+                break
 
     # --------------------------------------------------------------- run ---
     def run(self):

@@ -142,11 +142,13 @@ class Hud:
 
         cur = wm.current
         ammo_txt = str(getattr(p, cur.ammo_attr)) if cur.ammo_attr else "-"
-        scr.blit(bitmap(ammo_txt, 6), (28, y0 + 28))
+        ammo_col = (230, 190, 60) if g.cheat_ammo else (210, 40, 30)
+        scr.blit(bitmap(ammo_txt, 6, ammo_col), (28, y0 + 28))
         scr.blit(self.small.render("AMMO", True, (150, 150, 158)), (30, y0 + 12))
         scr.blit(self.small.render(cur.name, True, (200, 170, 80)), (28, y0 + 78))
 
-        scr.blit(bitmap(f"{int(p.health)}%", 6), (196, y0 + 28))
+        hp_col = (230, 190, 60) if g.cheat_health else (210, 40, 30)
+        scr.blit(bitmap(f"{int(p.health)}%", 6, hp_col), (196, y0 + 28))
         scr.blit(self.small.render("HEALTH", True, (150, 150, 158)), (198, y0 + 12))
 
         face = self._current_face()

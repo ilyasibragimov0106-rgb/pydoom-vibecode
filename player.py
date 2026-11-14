@@ -66,7 +66,7 @@ class Player:
         self.x, self.y = move_with_collision(m, self.x, self.y, dx, dy, PLAYER_RADIUS)
 
     def damage(self, dmg):
-        if not self.alive:
+        if not self.alive or getattr(self.game, 'cheat_health', False):
             return
         self.health -= dmg
         self.pain_t = 0.45

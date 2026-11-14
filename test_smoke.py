@@ -260,6 +260,29 @@ def main():
     assert g.level == 6 and g.boss is None and not g.map.exit_locked
     print("boss gate ok (level 5 sealed -> kill -> win -> level 6)")
 
+    # --- cheat codes -------------------------------------------------------------
+    g.new_game()
+    p = g.player
+    p.bullets = 0
+    p.shells = 0
+    for k in "sadsadwwsad":
+        g.handle_event(pygame.event.Event(pygame.KEYDOWN, key=getattr(pygame, f"K_{k}")))
+    assert g.cheat_ammo, "ammo cheat did not activate"
+    g.weapons.select(0)
+    g.weapons.anim_t = 99.0
+    g.weapons.cooldown = 0.0
+    g.weapons.fire()                # pistol with 0 bullets must still fire
+    assert p.bullets == 0, "ammo was consumed despite the cheat"
+    for k in "wswswsadadad":
+        g.handle_event(pygame.event.Event(pygame.KEYDOWN, key=getattr(pygame, f"K_{k}")))
+    assert g.cheat_health, "health cheat did not activate"
+    p.damage(50)
+    assert p.health == 100, "god mode did not block damage"
+    for k in "sadsadwwsad":         # toggles back off
+        g.handle_event(pygame.event.Event(pygame.KEYDOWN, key=getattr(pygame, f"K_{k}")))
+    assert not g.cheat_ammo
+    print("cheat codes ok")
+
     # --- AI soak: everyone fights for 10 simulated seconds ----------------------
     g.new_game()
     for _ in range(600):
